@@ -3,7 +3,7 @@
 const { Model, DataTypes } = require('sequelize');
 const { sequelize } = require('../../config/database');
 
-const loadedCodes = sequelize.define('loadedCodes', {
+const loadedCodes = sequelize.define('codes', {
   id: {
     allowNull: false,
     autoIncrement: true,
@@ -53,7 +53,7 @@ const loadedCodes = sequelize.define('loadedCodes', {
   }
 }, {
   freezeTableName: true,
-  modelName: 'loadedCodes',
+  modelName: 'codes',
   timestamps: true,
   paranoid: false
 });
