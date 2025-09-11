@@ -37,19 +37,19 @@ const loadedCodes = sequelize.define('codes', {
   codeStatus: {
     type: DataTypes.STRING(20),
     allowNull: true,
-    defaultValue: 'active'
+    defaultValue: 'unused'
   },
   updatedBy: {
     type: DataTypes.STRING(100),
     allowNull: true
   },
   updatedAt: {
-    allowNull: false,
+    allowNull: true,
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   },
   createdAt: {
-    allowNull: false,
+    allowNull: true,
     type: DataTypes.DATE,
     defaultValue: DataTypes.NOW
   }

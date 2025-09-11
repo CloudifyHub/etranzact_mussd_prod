@@ -22,18 +22,19 @@ module.exports = {
         type: Sequelize.STRING
       },
       codeStatus: {
-        type: Sequelize.STRING
+        type: Sequelize.STRING,
+        defaultValue: 'unused'
       },
       updatedBy: {
         type: Sequelize.STRING
       },
       updatedAt: {
-        allowNull: false,
+        allowNull: true,
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW
       },
       createdAt: {
-        allowNull: false,
+        allowNull: true,
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW
       }
