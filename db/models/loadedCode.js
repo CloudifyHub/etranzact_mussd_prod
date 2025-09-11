@@ -45,11 +45,13 @@ const loadedCodes = sequelize.define('codes', {
   },
   updatedAt: {
     allowNull: false,
-    type: DataTypes.DATE
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   },
   createdAt: {
     allowNull: false,
-    type: DataTypes.DATE
+    type: DataTypes.DATE,
+    defaultValue: DataTypes.NOW
   }
 }, {
   freezeTableName: true,
