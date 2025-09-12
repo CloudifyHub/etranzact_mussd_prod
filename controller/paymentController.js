@@ -8,35 +8,72 @@ const vouchers = require('../db/models/voucherCodes');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const { sendSms } = require('../utils/smsService');
+const { saveLog } = require('../utils/logs');
 
 const processPayment = catchAsync(async (req, res, next) => {
   const body = req.body;
   const qty = parseInt(body.qty, 10);
+  let newTxn; // keep reference outside for error handling
 
   // Start DB transaction
   const t = await sequelize.transaction();
 
   try {
-    // Check for duplicate transaction
-    const existingTxn = await transactions.findOne({
-      where: {
-        transactionId: body.transactionId,
-        externalTransactionId: body.externalTransactionId
-      },
-      transaction: t,
-      lock: t.LOCK.UPDATE
-    });
+    // Log raw request body
+    await saveLog('Received payment request', body.transactionId || null, 'received', JSON.stringify(body));
 
-    if (existingTxn) {
-      newTxn.status = 'failed';
-      newTxn.failureReason = 'Transaction already exists';
-      await newTxn.save({ transaction: t });
-      await t.commit();
-      return next(new AppError('Transaction already exists', 409));
+    if (
+      !body ||
+      !body.transactionId ||
+      !body.externalTransactionId ||
+      !body.customerMobile ||
+      !body.network ||
+      !body.paymentRef ||
+      !body.qty ||
+      !body.amount ||
+      !body.action
+    ) {
+      await saveLog('Missing required fields', body.transactionId, 'failed', JSON.stringify(body));
+      return next(new AppError('Missing required fields', 400));
     }
 
-    // Create initial transaction log (always)
-    const newTxn = await transactions.create({
+    if (isNaN(qty) || qty <= 0) {
+      await saveLog('Invalid quantity', body.transactionId, 'failed', JSON.stringify(body));
+      return next(new AppError('Quantity must be a positive integer', 400));
+    }
+
+    if (body.action !== 'single' && body.action !== 'bulk') {
+      await saveLog('Invalid action type', body.transactionId, 'failed', JSON.stringify(body));
+      return next(new AppError('Invalid action type', 400));
+    }
+
+    if (body.amount <= 0) {
+      await saveLog('Invalid amount', body.transactionId, 'failed', JSON.stringify(body));
+      return next(new AppError('Invalid amount', 400));
+    }
+
+    if (body.action === 'single') {
+      // Check for duplicate transaction
+      const existingTxn = await transactions.findOne({
+        where: {
+          transactionId: body.transactionId,
+          externalTransactionId: body.externalTransactionId
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+
+      if (existingTxn) {
+        await saveLog('Transaction already exists', body.transactionId, 'failed', JSON.stringify(body));
+        existingTxn.status = 'failed';
+        existingTxn.failureReason = 'Transaction already exists';
+        await existingTxn.save({ transaction: t });
+        await t.commit();
+        return next(new AppError('Transaction already exists', 409));
+      }
+
+      // Create initial transaction
+      newTxn = await transactions.create({
         transactionId: body.transactionId,
         externalTransactionId: body.externalTransactionId,
         customerName: body.customerName,
@@ -48,96 +85,103 @@ const processPayment = catchAsync(async (req, res, next) => {
         action: body.action,
         status: 'initiated',
         createdBy: 'system'
-    }, { transaction: t });
+      }, { transaction: t });
 
-    if (!newTxn) {
-      return next(new AppError('Failed to create transaction', 500));
-    }
-    
-    // Fetch voucher template
-    const voucherTemplate = await vouchers.findOne({
-      where: { codeName: body.paymentRef },
-      transaction: t
-    });
+      // Fetch voucher template
+      const voucherTemplate = await vouchers.findOne({
+        where: { codeName: body.paymentRef },
+        transaction: t
+      });
 
-
-    if (!voucherTemplate) {
-      newTxn.status = 'failed';
-      newTxn.failureReason = 'Voucher template not found';
-      await newTxn.save({ transaction: t });
-      await t.commit();
-      return next(new AppError('Voucher template not found', 404));
-    }
-
-    // Allocate codes safely
-    const availableCodes = await codes.findAll({
-      where: { codeStatus: 'unused', codeName: body.paymentRef },
-      limit: qty,
-      lock: t.LOCK.UPDATE,
-      skipLocked: true,
-      transaction: t
-    });
-
-    if (!availableCodes || availableCodes.length < qty) {
-      newTxn.status = 'failed';
-      newTxn.failureReason = 'Not enough voucher codes available';
-      await newTxn.save({ transaction: t });
-      await t.commit();
-      return next(new AppError('Not enough voucher codes available', 400));
-    }
-
-    // Mark codes as used & log delivered codes
-    const deliveredRecords = availableCodes.map(code => ({
-      codeId: code.codeId,
-      codeName: code.codeName,
-      codeType1: code.codeType1,
-      codeType2: code.codeType2,
-      codeStatus: 'delivered',
-      customerMobile: body.customerMobile,
-      transactionId: newTxn.id,
-      deliveredBy: 'system'
-    }));
-
-    await Promise.all(
-      availableCodes.map(code => {
-        code.codeStatus = 'used';
-        code.updatedBy = 'system';
-        return code.save({ transaction: t });
-      })
-    );
-
-    await deliveredCodes.bulkCreate(deliveredRecords, { transaction: t });
-
-    // Mark transaction as success
-    newTxn.status = 'success';
-    await newTxn.save({ transaction: t });
-    await t.commit();
-
-    // Send SMS in parallel (non-blocking)
-    // const smsPromises = availableCodes.map(code => {
-    //   const message = `TEST ${voucherTemplate.codeMessage} - ${voucherTemplate.codeType1}: ${code.codeType1} ${voucherTemplate.codeType2}: ${code.codeType2} Link - ${voucherTemplate.codeLink}`;
-    //   return sendSms(body.customerMobile, message).catch(err => console.error('SMS failed', err));
-    // });
-
-    // await Promise.all(smsPromises); // optional
-
-    return res.status(200).json({
-      status: 'success',
-      message: 'Voucher(s) delivered successfully',
-      data: {
-        transactionId: body.transactionId,
-        externalTransactionId: body.externalTransactionId,
-        customerMobile: body.customerMobile,
-        delivered: availableCodes.map(c => ({ code: c.codeName }))
+      if (!voucherTemplate) {
+        await saveLog('Voucher template not found', body.transactionId, 'failed', JSON.stringify(body));
+        newTxn.status = 'failed';
+        newTxn.failureReason = 'Voucher template not found';
+        await newTxn.save({ transaction: t });
+        await t.commit();
+        return next(new AppError('Voucher template not found', 404));
       }
-    });
+
+      // Allocate codes
+      const availableCodes = await codes.findAll({
+        where: { codeStatus: 'unused', codeName: body.paymentRef },
+        limit: qty,
+        lock: t.LOCK.UPDATE,
+        skipLocked: true,
+        transaction: t
+      });
+
+      if (!availableCodes || availableCodes.length < qty) {
+        await saveLog('Not enough codes available', body.transactionId, 'failed', JSON.stringify(body));
+        newTxn.status = 'failed';
+        newTxn.failureReason = 'Not enough voucher codes available';
+        await newTxn.save({ transaction: t });
+        await t.commit();
+        return next(new AppError('Not enough voucher codes available', 400));
+      }
+
+      // Mark codes as used
+      const deliveredRecords = availableCodes.map(code => ({
+        codeId: code.codeId,
+        codeName: code.codeName,
+        codeType1: code.codeType1,
+        codeType2: code.codeType2,
+        codeStatus: 'delivered',
+        customerMobile: body.customerMobile,
+        transactionId: newTxn.id,
+        deliveredBy: 'system'
+      }));
+
+      await Promise.all(
+        availableCodes.map(code => {
+          code.codeStatus = 'used';
+          code.updatedBy = 'system';
+          return code.save({ transaction: t });
+        })
+      );
+
+      await deliveredCodes.bulkCreate(deliveredRecords, { transaction: t });
+
+      // Mark transaction as success
+      newTxn.status = 'success';
+      await newTxn.save({ transaction: t });
+      await t.commit();
+
+      // Send SMS (async, don’t block response)
+      availableCodes.forEach(code => {
+        const message = `TEST ${voucherTemplate.codeMessage} - ${voucherTemplate.codeType1}: ${code.codeType1} ${voucherTemplate.codeType2}: ${code.codeType2} Link - ${voucherTemplate.codeLink}`;
+        sendSms(body.customerMobile, message)
+          .then(() => saveLog('SMS sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
+      });
+
+      return res.status(200).json({
+        status: 'success',
+        message: 'Voucher(s) delivered successfully',
+        data: {
+          transactionId: body.transactionId,
+          externalTransactionId: body.externalTransactionId,
+          //customerMobile: body.customerMobile,
+          //delivered: availableCodes.map(c => ({ code: c.codeName, codeType1: c.codeType1, codeType2: c.codeType2 }))
+          //delivered: availableCodes.map(c => ({ code: c.codeName }))
+        }
+      });
+    }
+
+    if (body.action === 'bulk') {
+      // Bulk logic placeholder
+      await saveLog('Bulk action requested (not yet implemented)', body.transactionId, 'pending');
+      return next(new AppError('Bulk processing not implemented yet', 501));
+    }
 
   } catch (err) {
-    // On unexpected error, mark transaction failed but keep record
-    newTxn.status = 'failed';
-    newTxn.failureReason = err.message;
-    await newTxn.save({ transaction: t });
-    await t.commit();
+    if (newTxn) {
+      newTxn.status = 'failed';
+      newTxn.failureReason = err.message;
+      await newTxn.save({ transaction: t });
+    }
+    await saveLog(`Error: ${err.message}`, body.transactionId, 'failed');
+    //await t.rollback();
     return next(new AppError(err.message, 500));
   }
 });

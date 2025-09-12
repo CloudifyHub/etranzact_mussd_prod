@@ -1,6 +1,9 @@
 'use strict';
 require('dotenv').config({ path: `${process.cwd()}/.env` });
 const axios = require('axios');
+const catchAsync = require('../utils/catchAsync');
+const AppError = require('../utils/appError');
+
 
 // Send SMS using Arkesel API
 const sendSms = async (recipient, message, options = {}) => {
@@ -22,10 +25,10 @@ const sendSms = async (recipient, message, options = {}) => {
     };
 
     const response = await axios(config);
-    console.log(`✅ SMS sent to ${recipient}:`, response.data);
+    console.log(`SMS sent to ${recipient}:`, response.data);
     return response.data;
   } catch (error) {
-    console.error(`❌ Failed to send SMS to ${recipient}:`, error.response?.data || error.message);
+    console.error(`Failed to send SMS to ${recipient}:`, error.response?.data || error.message);
     throw error;
   }
 };

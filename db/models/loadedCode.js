@@ -61,3 +61,6 @@ const loadedCodes = sequelize.define('codes', {
 });
 
 module.exports = loadedCodes;
+
+
+
