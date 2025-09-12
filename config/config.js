@@ -9,13 +9,7 @@ module.exports = {
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
     "pool_mode": process.env.DB_POOL_MODE,  //for supabase only
-    "dialect": process.env.DB_DIALECT,
-    dialectOptions: {
-      ssl: process.env.DB_SSL === 'true' ? {
-        require: true,
-        rejectUnauthorized: false // Set to true with a valid CA certificate for production
-      } : false
-    }
+    "dialect": process.env.DB_DIALECT
   },
   "test": {
     "username": "root",
@@ -31,12 +25,6 @@ module.exports = {
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
     "pool_mode": process.env.DB_POOL_MODE,  //for supabase only
-    "dialect": process.env.DB_DIALECT,
-    dialectOptions: {
-      ssl: process.env.DB_SSL === 'true' ? {
-        require: true,
-        rejectUnauthorized: false // Set to true with a valid CA certificate for production
-      } : false
-    }
+    "dialect": process.env.DB_DIALECT
   }
 }
