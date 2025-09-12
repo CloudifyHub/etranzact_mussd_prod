@@ -19,7 +19,7 @@ module.exports = {
         type: Sequelize.STRING
       },
       message: {
-        type: Sequelize.STRING
+        type: Sequelize.JSONB
       },
       createdAt: {
         allowNull: false,

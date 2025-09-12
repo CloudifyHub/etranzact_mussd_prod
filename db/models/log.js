@@ -24,7 +24,7 @@ const Logs = sequelize.define('logs', {
     allowNull: true
   },
   message: {
-    type: DataTypes.STRING(5000),
+    type: DataTypes.JSONB,
     allowNull: true
   }
 }, {
