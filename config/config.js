@@ -8,7 +8,7 @@ module.exports = {
     "database": process.env.DB_NAME,
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
-   // "pool_mode": process.env.DB_POOL_MODE,  //for supabase only
+    "pool_mode": process.env.DB_POOL_MODE,  //for supabase only
     "dialect": process.env.DB_DIALECT,
     dialectOptions: {
       ssl: process.env.DB_SSL === 'true' ? {
@@ -30,6 +30,13 @@ module.exports = {
     "database": process.env.DB_NAME,
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
-    "dialect": process.env.DB_DIALECT
+    "pool_mode": process.env.DB_POOL_MODE,  //for supabase only
+    "dialect": process.env.DB_DIALECT,
+    dialectOptions: {
+      ssl: process.env.DB_SSL === 'true' ? {
+        require: true,
+        rejectUnauthorized: false // Set to true with a valid CA certificate for production
+      } : false
+    }
   }
 }
