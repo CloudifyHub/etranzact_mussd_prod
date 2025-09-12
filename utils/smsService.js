@@ -33,12 +33,12 @@ const sendSms = async (recipient, message, options = {}) => {
   }
 };
 
-// ✅ Send Scheduled SMS
+// Send Scheduled SMS
 const scheduleSms = async (recipient, message, scheduledDate, options = {}) => {
   return sendSms(recipient, message, { ...options, scheduled_date: scheduledDate });
 };
 
-// ✅ Send SMS with Delivery Webhook
+// Send SMS with Delivery Webhook
 const sendSmsWithWebhook = async (recipient, message, callbackUrl, options = {}) => {
   return sendSms(recipient, message, { ...options, callback_url: callbackUrl });
 };
