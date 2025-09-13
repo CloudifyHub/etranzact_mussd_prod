@@ -16,10 +16,6 @@ const AppError = require('./appError');
 async function sendWhatsAppMsg(message, phone, transactionId) {
   const url = `${process.env.WHATSAPP_API_URL}`;
 
-  console.log('WhatsApp API URL:', url);
-  console.log(`WhatsApp Instance ID: ${process.env.WHATSAPP_INSTANCE_ID}`);
-  console.log(`WhatsApp API Token: ${process.env.WHATSAPP_API_TOKEN}`);
-
   try {
     const body = {
       chatId: `${phone}@c.us`,
