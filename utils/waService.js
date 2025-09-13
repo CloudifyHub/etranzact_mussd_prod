@@ -1,3 +1,4 @@
+'use strict';
 require('dotenv').config({ path: `${process.cwd()}/.env` });
 const axios = require('axios');
 const catchAsync = require('./catchAsync');
@@ -13,9 +14,11 @@ const AppError = require('./appError');
  */
 
 async function sendWhatsAppMsg(message, phone, transactionId) {
-  const url = 'https://api.green-api.com/waInstance/7103920368/sendMessage/1a2b2e3afb334cc1a5d5262d1c2165fcaab5423be0a040c487';
-   
-  console.log('WhatsApp API URL:', url); // Debug log
+  const url = `${process.env.WHATSAPP_API_URL}`;
+
+  console.log('WhatsApp API URL:', url);
+  console.log(`WhatsApp Instance ID: ${process.env.WHATSAPP_INSTANCE_ID}`);
+  console.log(`WhatsApp API Token: ${process.env.WHATSAPP_API_TOKEN}`);
 
   try {
     const body = {
@@ -34,7 +37,6 @@ async function sendWhatsAppMsg(message, phone, transactionId) {
     return response.data;
   } catch (error) {
     console.error(`WhatsApp send failed [${transactionId}] → ${phone}`, error.message);
-    console.error('Error details:', error.response?.data || error);
     throw error;
   }
 }
