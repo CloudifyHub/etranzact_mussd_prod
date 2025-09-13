@@ -9,7 +9,10 @@ const vouchers = require('../db/models/voucherCodes');
 const catchAsync = require('../utils/catchAsync');
 const AppError = require('../utils/appError');
 const { sendSms } = require('../utils/smsService');
+const { sendWhatsAppMsg } = require('../utils/waService')
 const { saveLog } = require('../utils/logs');
+
+
 
 const processPayment = catchAsync(async (req, res, next) => {
   const body = req.body;
@@ -100,6 +103,18 @@ const processPayment = catchAsync(async (req, res, next) => {
         newTxn.failureReason = 'Voucher template not found';
         await newTxn.save({ transaction: t });
         await t.commit();
+
+        // Send error notification SMS
+        const message = `Dear client, an error has occurred while processing your request. Please contact support ${process.env.SUPPORT_CONTACT_NUMBER}. Transaction ID: ${body.transactionId}`;
+        sendSms(body.customerMobile, message)
+          .then(() => saveLog('SMS sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
+        // Send error notification WhatsApp
+        sendWhatsAppMsg(message, body.customerMobile, body.transactionId)
+          .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
         return next(new AppError('Voucher template not found', 404));
       }
 
@@ -118,6 +133,18 @@ const processPayment = catchAsync(async (req, res, next) => {
         newTxn.failureReason = 'Not enough voucher codes available';
         await newTxn.save({ transaction: t });
         await t.commit();
+
+        // Send error notification SMS
+        const message = `Dear client, we are out of codes for delivery now. We will restock and send them to you as soon as possible. Please contact support ${process.env.SUPPORT_CONTACT_NUMBER}. Transaction ID: ${body.transactionId}`;
+        sendSms(body.customerMobile, message)
+          .then(() => saveLog('SMS sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
+        // Send error notification WhatsApp
+        sendWhatsAppMsg(message, body.customerMobile, body.transactionId)
+          .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
         return next(new AppError('Not enough voucher codes available', 400));
       }
 
@@ -150,10 +177,18 @@ const processPayment = catchAsync(async (req, res, next) => {
 
       // Send SMS (async, don’t block response)
       availableCodes.forEach(code => {
-        const message = `TEST ${voucherTemplate.codeMessage} - ${voucherTemplate.codeType1}: ${code.codeType1} ${voucherTemplate.codeType2}: ${code.codeType2} Link - ${voucherTemplate.codeLink}`;
+        const message = `${voucherTemplate.codeMessage} - ${voucherTemplate.codeType1}: ${code.codeType1} ${voucherTemplate.codeType2}: ${code.codeType2} Link - ${voucherTemplate.codeLink}`;
+
+        // Send SMS
         sendSms(body.customerMobile, message)
           .then(() => saveLog('SMS sent', newTxn.transactionId, 'success', message))
           .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
+        // Send WhatsApp
+        sendWhatsAppMsg(message, body.customerMobile, body.transactionId)
+          .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
       });
 
       return res.status(200).json({
