@@ -1,5 +1,6 @@
 'use strict';
 
+const axios = require('axios');
 const { sequelize } = require('../config/database');
 const codes = require('../db/models/loadedCode');
 const transactions = require('../db/models/transaction');
@@ -169,9 +170,48 @@ const processPayment = catchAsync(async (req, res, next) => {
     }
 
     if (body.action === 'bulk') {
+
       // Bulk logic placeholder
-      await saveLog('Bulk action requested (not yet implemented)', body.transactionId, 'pending');
-      return next(new AppError('Bulk processing not implemented yet', 501));
+
+      const payload = {
+        amount: body.amount,
+        password: "45a0wdRf9a6dce4505a0bd29c292842232",
+        customerEmail: body.customerEmail || "",
+        qty: body.qty,
+        action: "bulk",
+        externalTransactionId: body.externalTransactionId,
+        customerMobile: body.customerMobile,
+        customerName: body.customerName || "",
+        transactionId: body.transactionId,
+        network: body.network,
+        paymentRef: body.paymentRef,
+        username: "etranzact"
+      };
+
+      try {
+        const response = await axios.post('https://gfbf28ff799c3ec-cdsproduction1.adb.uk-london-1.oraclecloudapps.com/ords/mawulepe/etranzact/v1/sendcode', payload, {
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+       // console.log('Bulk transaction successful:', response.data);
+
+        if (response.data.ResponseCode === '01') {
+          await saveLog('Bulk transaction received for processing', body.transactionId, 'success', JSON.stringify(response.data));
+          return res.status(200).json({
+            status: 'success',
+            message: 'Bulk transaction processed successfully',
+            data: response.data
+          });
+
+        } else {
+          await saveLog('Bulk transaction failed', body.transactionId, 'failed', JSON.stringify(response.data));
+          return next(new AppError(response.responseDescription || 'Bulk transaction failed', 400));
+        }
+
+      } catch (error) {
+        await saveLog('Error sending bulk transaction', body.transactionId, 'failed', error.message);
+        return next(new AppError('Error sending bulk transaction', 500));
+      }
     }
 
   } catch (err) {
