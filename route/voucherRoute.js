@@ -8,6 +8,7 @@ const voucherController = require('../controller/voucherController');
 router.post('/', basicAuth, voucherController.createVoucher);
 router.get('/', basicAuth, voucherController.getAllVouchers);
 router.get('/:id', basicAuth, voucherController.getVoucherById);
+router.get('/category/:category', voucherController.getAllVoucherByCategory);
 router.patch('/:id', basicAuth, voucherController.updateVoucher);
 router.delete('/:id', basicAuth, voucherController.deleteVoucher);
 

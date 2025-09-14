@@ -149,10 +149,27 @@ const deleteVoucher = catchAsync(async (req, res, next) => {
 });
 
 
+
+const getAllVoucherByCategory = catchAsync(async (req, res, next) => {
+    const codeCategory = req.params.category.toUpperCase();
+    const result = await vouchers.findAll({ where: { codeCategory: codeCategory } });
+
+    if (!result || result.length === 0) {
+        return next(new AppError('No vouchers found with the specified category', 404));
+    }
+
+    return res.status(200).json({
+        status: 'success',
+        message: 'Vouchers fetched successfully',
+        data: result
+    });
+});
+
 module.exports = { 
     createVoucher, 
     getAllVouchers, 
     getVoucherById, 
     updateVoucher, 
-    deleteVoucher 
+    deleteVoucher,
+    getAllVoucherByCategory
 };
