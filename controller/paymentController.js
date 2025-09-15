@@ -245,6 +245,7 @@ const processPayment = catchAsync(async (req, res, next) => {
 
       } catch (error) {
         await saveLog('Error sending bulk transaction', body.transactionId, 'failed', error.message);
+        console.error('Error sending bulk transaction:', error.message);
         return next(new AppError('Error sending bulk transaction', 500));
       }
     }
