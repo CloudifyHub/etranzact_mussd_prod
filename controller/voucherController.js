@@ -8,8 +8,7 @@ const { sendWhatsAppMsg } = require('../utils/waService')
 const { saveLog } = require('../utils/logs');
 const transactions = require('../db/models/transaction');
 const deliveredCodes = require('../db/models/deliveredCodes');
-const Logs = require('../db/models/log');
-
+const retrieveVouchers = require('../db/models/retrieve-vouchers');
 
 
 // Create a voucher
@@ -157,9 +156,10 @@ const deleteVoucher = catchAsync(async (req, res, next) => {
 
 
 
+// Get all vouchers by category
 const getAllVoucherByCategory = catchAsync(async (req, res, next) => {
     const codeCategory = req.params.category.toUpperCase();
-    const result = await vouchers.findAll({ where: { codeCategory: codeCategory } });
+    const result = await vouchers.findAll({ where: { codeCategory: codeCategory, codeStatus: 'active' } });
 
     if (!result || result.length === 0) {
         return next(new AppError('No vouchers found with the specified category', 404));
@@ -168,30 +168,68 @@ const getAllVoucherByCategory = catchAsync(async (req, res, next) => {
     return res.status(200).json({
         status: 'success',
         message: 'Vouchers fetched successfully',
-        data: result
+        data: result.map(voucher => ({ codeName: voucher.codeName, 
+            codePrice: voucher.codePrice, 
+            bulkPurchasePrice: voucher.bulkPurchasePrice, 
+            maxPurchaseQty: voucher.maxPurchaseQty, 
+            bulkPurchaseLimit: voucher.bulkPurchaseLimit
+         }))
     });
 });
 
 
-const retrieveVoucher = catchAsync(async (req, res, next) => {
-    const { transactionId } = req.body;
+// Retrieve Voucher Codes
+const retrieveVoucherCodes = catchAsync(async (req, res, next) => {
+    const { transactionId, customerMobile, externalTransactionId, clientTransactionId, amount } = req.body;
 
-    if (!transactionId) {
+    //save to logs
+    saveLog('Retrieve Voucher Attempt', transactionId, 'attempt', `Request Body: ${JSON.stringify(req.body)}`);
+
+    // Validate input
+
+    if (!transactionId || transactionId.trim() === '') {
         return next(new AppError('transactionId is required', 400));
     }
 
-    const transactionDetails = await transactions.findOne({ where: { transactionId: transactionId } });
+    if (!customerMobile || customerMobile.trim() === '') {
+        return next(new AppError('customerMobile is required', 400));
+    }
+
+    if (!externalTransactionId || externalTransactionId.trim() === '') {
+        return next(new AppError('externalTransactionId is required', 400));
+    }
+
+    if (!clientTransactionId || clientTransactionId.trim() === '') {
+        return next(new AppError('clientTransactionId is required', 400));
+    }
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+        return next(new AppError('Valid amount is required', 400));
+    }
+
+   try {
+
+    // Check if the transaction has already been retrieved
+    const existingRecord = await retrieveVouchers.findOne({ where: { transactionId  } });
+
+    if (existingRecord) {
+        saveLog('Retrieve Voucher Attempt', transactionId, 'failed', `transactionId ${transactionId} has already been processed`);
+        return next(new AppError('This transaction has already been processed', 400));
+    }
+
+    // Find the transaction
+    const transactionDetails = await transactions.findOne({ where: { transactionId: clientTransactionId } });
 
     if (!transactionDetails) {
+        saveLog('Retrieve Voucher Attempt', transactionId, 'failed', `transactionId ${clientTransactionId} not found`);
         return next(new AppError('Transaction not found', 404));
     }
 
     const deliveredVouchers = await deliveredCodes.findAll({ where: { transactionId: transactionDetails.id } });
 
     if (!deliveredVouchers) {
+        saveLog('Retrieve Voucher Attempt', transactionId, 'failed', `Delivered vouchers not found for transactionId ${transactionDetails.id}`);
         return next(new AppError('Delivered vouchers not found for this transaction', 404));
     }
-
 
     // Find the voucher template
     const voucherTemplate = await vouchers.findOne({
@@ -199,13 +237,13 @@ const retrieveVoucher = catchAsync(async (req, res, next) => {
       });
     
     if (!voucherTemplate) {
+        saveLog('Retrieve Voucher Attempt', transactionId, 'failed', `Voucher template not found for transactionId ${transactionId}`);
         return next(new AppError('Voucher template not found', 404));
     }
 
     // Send SMS (async, don’t block response)
     deliveredVouchers.forEach(delivered => {
        const message = `${voucherTemplate.codeMessage} - ${voucherTemplate.codeType1}: ${delivered.codeType1} ${voucherTemplate.codeType2}: ${delivered.codeType2} Link - ${voucherTemplate.codeLink}`;
-
 
         // Send SMS
         sendSms(transactionDetails.customerMobile, message)
@@ -219,6 +257,17 @@ const retrieveVoucher = catchAsync(async (req, res, next) => {
 
       });
 
+    saveLog('Retrieve Voucher Attempt', transactionId, 'success', `Vouchers retrieved for transactionId ${transactionDetails.id}`);
+ 
+    // Create record in retrievedCodes table
+    await retrieveVouchers.create({
+        transactionId,
+        customerMobile,
+        externalTransactionId,
+        clientTransactionId,
+        amount
+    });
+
 
     return res.status(200).json({
         status: 'success',
@@ -228,8 +277,12 @@ const retrieveVoucher = catchAsync(async (req, res, next) => {
         //     deliveredVouchers
         // }
     });
-}
-);
+    } catch (error) {
+    saveLog('Retrieve Voucher Attempt', transactionId, 'failed', `Error retrieving vouchers: ${error.message}`);
+    console.error('Error retrieving vouchers:', error);
+    return next(new AppError('Error retrieving vouchers', 500));
+    }
+});
 
 module.exports = { 
     createVoucher, 
@@ -238,5 +291,5 @@ module.exports = {
     updateVoucher, 
     deleteVoucher,
     getAllVoucherByCategory,
-    retrieveVoucher
+    retrieveVoucherCodes
 };

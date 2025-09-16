@@ -9,7 +9,7 @@ router.post('/', basicAuth, voucherController.createVoucher);
 router.get('/', basicAuth, voucherController.getAllVouchers);
 router.get('/:id', basicAuth, voucherController.getVoucherById);
 router.get('/category/:category', basicAuth, voucherController.getAllVoucherByCategory);
-router.post('/retrieve', voucherController.retrieveVoucher);
+router.post('/retrieve', voucherController.retrieveVoucherCodes);
 router.patch('/:id', basicAuth, voucherController.updateVoucher);
 router.delete('/:id', basicAuth, voucherController.deleteVoucher);
 
