@@ -206,8 +206,13 @@ const processPayment = catchAsync(async (req, res, next) => {
 
     if (body.action === 'bulk') {
 
-      // Bulk logic placeholder
+      const customerEmail = body.customerEmail;
+      if (customerEmail === null || customerEmail === undefined || customerEmail === '') {
+        await saveLog('Missing customer email for bulk', body.transactionId, 'failed', JSON.stringify(body));
+        return next(new AppError('Customer email is required for bulk transactions', 400));
+      }
 
+      // Prepare payload for external API
       const payload = {
         amount: body.amount,
         password: "45a0wdRf9a6dce4505a0bd29c292842232",
