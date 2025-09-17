@@ -16,7 +16,7 @@ const { saveLog } = require('../utils/logs');
 
 const processPayment = catchAsync(async (req, res, next) => {
   const body = req.body;
-  const qty = parseInt(body.qty, 10);
+  const qty = body.qty;
   let newTxn; // keep reference outside for error handling
 
   // Start DB transaction
@@ -60,8 +60,7 @@ const processPayment = catchAsync(async (req, res, next) => {
       // Check for duplicate transaction
       const existingTxn = await transactions.findOne({
         where: {
-          transactionId: body.transactionId,
-          externalTransactionId: body.externalTransactionId
+          transactionId: body.transactionId
         },
         transaction: t,
         lock: t.LOCK.UPDATE
