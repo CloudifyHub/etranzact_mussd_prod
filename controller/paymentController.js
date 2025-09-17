@@ -38,22 +38,22 @@ const processPayment = catchAsync(async (req, res, next) => {
       !body.action
     ) {
       await saveLog('Missing required fields', body.transactionId, 'failed', JSON.stringify(body));
-      return next(new AppError('Missing required fields', 400));
+      return next(new AppError('Missing required fields', 404));
     }
 
     if (isNaN(qty) || qty <= 0) {
       await saveLog('Invalid quantity', body.transactionId, 'failed', JSON.stringify(body));
-      return next(new AppError('Quantity must be a positive integer', 400));
+      return next(new AppError('Quantity must be a positive integer', 404));
     }
 
     if (body.action !== 'single' && body.action !== 'bulk') {
       await saveLog('Invalid action type', body.transactionId, 'failed', JSON.stringify(body));
-      return next(new AppError('Invalid action type', 400));
+      return next(new AppError('Invalid action type', 404));
     }
 
     if (body.amount <= 0) {
       await saveLog('Invalid amount', body.transactionId, 'failed', JSON.stringify(body));
-      return next(new AppError('Invalid amount', 400));
+      return next(new AppError('Invalid amount', 404));
     }
 
     if (body.action === 'single') {
@@ -72,7 +72,7 @@ const processPayment = catchAsync(async (req, res, next) => {
         existingTxn.failureReason = 'Transaction already exists';
         await existingTxn.save({ transaction: t });
         await t.commit();
-        return next(new AppError('Transaction already exists', 409));
+        return next(new AppError('Transaction already exists', 404));
       }
 
       // Create initial transaction
@@ -144,7 +144,7 @@ const processPayment = catchAsync(async (req, res, next) => {
           .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
           .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
 
-        return next(new AppError('Not enough voucher codes available', 400));
+        return next(new AppError('Not enough voucher codes available', 404));
       }
 
       // Mark codes as used
@@ -208,7 +208,7 @@ const processPayment = catchAsync(async (req, res, next) => {
       const customerEmail = body.customerEmail;
       if (customerEmail === null || customerEmail === undefined || customerEmail === '') {
         await saveLog('Missing customer email for bulk', body.transactionId, 'failed', JSON.stringify(body));
-        return next(new AppError('Customer email is required for bulk transactions', 400));
+        return next(new AppError('Customer email is required for bulk transactions', 404));
       }
 
       // Prepare payload for external API
@@ -244,7 +244,7 @@ const processPayment = catchAsync(async (req, res, next) => {
 
         } else {
           await saveLog('Bulk transaction failed', body.transactionId, 'failed', JSON.stringify(response.data));
-          return next(new AppError(response.responseDescription || 'Bulk transaction failed', 400));
+          return next(new AppError(response.responseDescription || 'Bulk transaction failed', 404));
         }
 
       } catch (error) {
