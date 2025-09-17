@@ -75,6 +75,23 @@ const processPayment = catchAsync(async (req, res, next) => {
         return next(new AppError('Transaction already exists', 404));
       }
 
+      const externalTxn = await transactions.findOne({
+        where: {
+          externalTransactionId: body.externalTransactionId
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+
+      if (externalTxn) {
+        await saveLog('External transaction ID already exists', body.transactionId, 'failed', JSON.stringify(body));
+        externalTxn.status = 'failed';
+        externalTxn.failureReason = 'External transaction ID already exists';
+        await externalTxn.save({ transaction: t });
+        await t.commit();
+        return next(new AppError('External transaction ID already exists', 404));
+      }
+
       // Create initial transaction
       newTxn = await transactions.create({
         transactionId: body.transactionId,
