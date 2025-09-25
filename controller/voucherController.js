@@ -172,7 +172,7 @@ const getAllVoucherByCategory = catchAsync(async (req, res, next) => {
             codePrice: voucher.codePrice, 
             bulkPurchasePrice: voucher.bulkPurchasePrice, 
             maxPurchaseQty: voucher.maxPurchaseQty, 
-            bulkPurchaseLimit: voucher.bulkPurchaseLimit
+            minPurchaseLimit: voucher.minPurchaseLimit
          }))
     });
 });
