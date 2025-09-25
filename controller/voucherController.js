@@ -171,7 +171,7 @@ const getAllVoucherByCategory = catchAsync(async (req, res, next) => {
         data: result.map(voucher => ({ codeName: voucher.codeName, 
             codePrice: voucher.codePrice, 
             bulkPurchasePrice: voucher.bulkPurchasePrice, 
-            maxPurchaseQty: voucher.maxPurchaseQty, 
+            maxPurchaseQty: voucher.maxPurchaseQty,
             minPurchaseLimit: voucher.minPurchaseLimit
          }))
     });
