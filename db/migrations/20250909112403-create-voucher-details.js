@@ -58,7 +58,7 @@ module.exports = {
       bulkPurchasePrice: {
         type: Sequelize.FLOAT
       },
-      bulkPurchaseLimit: {
+      minPurchaseLimit: {
         type: Sequelize.INTEGER
       },
       maxPurchaseQty: {

@@ -76,7 +76,7 @@ const voucherCodes = sequelize.define('voucherCodes', {
     type: DataTypes.FLOAT,
     allowNull: true
   },
-  bulkPurchaseLimit: {
+  minPurchaseLimit: {
     type: DataTypes.INTEGER,
     allowNull: true
   },
