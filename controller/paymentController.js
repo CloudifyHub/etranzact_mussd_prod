@@ -134,6 +134,34 @@ const processPayment = catchAsync(async (req, res, next) => {
         return next(new AppError('Voucher template not found', 404));
       }
 
+      //Check Price
+      const expectedAmount = voucherTemplate.codePrice * qty;
+      if (body.amount < expectedAmount) {
+        await saveLog('Insufficient amount', body.transactionId, 'failed', JSON.stringify(body));
+        newTxn.status = 'failed';
+        newTxn.failureReason = `Insufficient amount. Expected at least ${expectedAmount}`;
+        await newTxn.save({ transaction: t });
+        await t.commit();
+
+        // Send error notification SMS
+        const message = `Dear client, the amount paid is insufficient for the requested voucher(s). Please contact support ${process.env.SUPPORT_CONTACT_NUMBER}. Transaction ID: ${body.transactionId}`;
+        sendSms(body.customerMobile, message)
+          .then(() => saveLog('SMS sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
+        // Send error notification WhatsApp
+        sendWhatsAppMsg(message, body.customerMobile, body.transactionId)
+          .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
+          .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
+
+        return next(new AppError(`Insufficient amount. Expected at least ${expectedAmount}`, 404));
+      }
+
+      if (body.amount > expectedAmount) {
+        await saveLog('Overpayment detected', body.transactionId, 'warning', JSON.stringify(body));
+        // Proceed but log the overpayment
+      }
+
       // Allocate codes
       const availableCodes = await codes.findAll({
         where: { codeStatus: 'unused', codeName: body.paymentRef },
