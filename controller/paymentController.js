@@ -16,7 +16,7 @@ const { saveLog } = require('../utils/logs');
 
 const processPayment = catchAsync(async (req, res, next) => {
   const body = req.body;
-  const qty = body.qty;
+  const qty = req.body.qty;
   let newTxn; // keep reference outside for error handling
 
   // Start DB transaction
