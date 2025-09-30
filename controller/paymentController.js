@@ -16,7 +16,8 @@ const { saveLog } = require('../utils/logs');
 
 const processPayment = catchAsync(async (req, res, next) => {
   const body = req.body;
-  const qty = req.body.qty;
+  const voucherQty = parseInt(body.qty, 10);
+
   let newTxn; // keep reference outside for error handling
 
   // Start DB transaction
@@ -41,7 +42,7 @@ const processPayment = catchAsync(async (req, res, next) => {
       return next(new AppError('Missing required fields', 404));
     }
 
-    if (isNaN(qty) || qty <= 0) {
+    if (isNaN(voucherQty) || voucherQty <= 0) {
       await saveLog('Invalid quantity', body.transactionId, 'failed', JSON.stringify(body));
       return next(new AppError('Quantity must be a positive integer', 404));
     }
@@ -100,7 +101,7 @@ const processPayment = catchAsync(async (req, res, next) => {
         customerMobile: body.customerMobile,
         network: body.network,
         paymentRef: body.paymentRef,
-        qty: qty,
+        qty: voucherQty,
         amount: body.amount,
         action: body.action,
         status: 'initiated',
@@ -135,7 +136,7 @@ const processPayment = catchAsync(async (req, res, next) => {
       }
 
       //Check Price
-      const expectedAmount = voucherTemplate.codePrice * qty;
+      const expectedAmount = voucherTemplate.codePrice * voucherQty;
       if (body.amount < expectedAmount) {
         await saveLog('Insufficient amount', body.transactionId, 'failed', JSON.stringify(body));
         newTxn.status = 'failed';
@@ -165,13 +166,13 @@ const processPayment = catchAsync(async (req, res, next) => {
       // Allocate codes
       const availableCodes = await codes.findAll({
         where: { codeStatus: 'unused', codeName: body.paymentRef },
-        limit: qty,
+        limit: voucherQty,
         lock: t.LOCK.UPDATE,
         skipLocked: true,
         transaction: t
       });
 
-      if (!availableCodes || availableCodes.length < qty) {
+      if (!availableCodes || availableCodes.length < voucherQty) {
         await saveLog('Not enough codes available', body.transactionId, 'failed', JSON.stringify(body));
         newTxn.status = 'failed';
         newTxn.failureReason = 'Not enough voucher codes available';
