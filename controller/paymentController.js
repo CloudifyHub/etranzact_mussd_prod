@@ -145,7 +145,7 @@ const processPayment = catchAsync(async (req, res, next) => {
         await t.commit();
 
         // Send error notification SMS
-        const message = `Dear client, the amount paid is insufficient for the requested voucher(s). Please contact support ${process.env.SUPPORT_CONTACT_NUMBER}. Transaction ID: ${body.transactionId}`;
+        const message = `Dear client, the amount paid is insufficient for the requested voucher(s). Please WhatsApp support ${process.env.SUPPORT_CONTACT_NUMBER}. Transaction ID: ${body.transactionId}`;
         sendSms(body.customerMobile, message)
           .then(() => saveLog('SMS sent', newTxn.transactionId, 'success', message))
           .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
@@ -180,7 +180,7 @@ const processPayment = catchAsync(async (req, res, next) => {
         await t.commit();
 
         // Send error notification SMS
-        const message = `Dear client, we are out of codes for delivery now. We will restock and send them to you as soon as possible. Please contact support ${process.env.SUPPORT_CONTACT_NUMBER}. Transaction ID: ${body.transactionId}`;
+        const message = `Dear client, we are out of codes for distribution. We will restock and send codes shortly. WhatsApp support ${process.env.SUPPORT_CONTACT_NUMBER}. Transaction ID: ${body.transactionId}`;
         sendSms(body.customerMobile, message)
           .then(() => saveLog('SMS sent', newTxn.transactionId, 'success', message))
           .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
