@@ -159,7 +159,7 @@ const deleteVoucher = catchAsync(async (req, res, next) => {
 // Get all vouchers by category
 const getAllVoucherByCategory = catchAsync(async (req, res, next) => {
     const codeCategory = req.params.category.toUpperCase();
-    const result = await vouchers.findAll({ where: { codeCategory: codeCategory, codeStatus: 'active' } });
+    const result = await vouchers.findAll({ where: { codeCategory: codeCategory, codeStatus: 'active' } , order: [['codeId', 'ASC']]});
 
     if (!result || result.length === 0) {
         return next(new AppError('No vouchers found with the specified category', 404));
