@@ -9,6 +9,7 @@ const paymentRoute = require('./route/paymentRoute');
 const catchAsync = require('./utils/catchAsync');
 const AppError = require('./utils/appError');
 const globalErrorHandler = require('./controller/errorController');
+const statusRoute = require('./route/statusRoute');
 
 
 
@@ -19,7 +20,7 @@ app.use(cors());
 // Routes
 app.use('/api/v1/voucher', voucherRoute);
 app.use('/api/v1/payment', paymentRoute);
-
+app.use('/api/v1/status', statusRoute);
 
 
 
