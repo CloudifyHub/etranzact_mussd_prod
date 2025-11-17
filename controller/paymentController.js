@@ -73,8 +73,8 @@ const processPayment = catchAsync(async (req, res, next) => {
         existingTxn.failureReason = 'Transaction already exists';
         await existingTxn.save({ transaction: t });
         await t.commit();
-         // return next(new AppError('Transaction already exists', 404));
-          return next(new AppError('Transaction already exists', 200));
+        return next(new AppError('Transaction already exists', 404));
+         
       }
 
       const externalTxn = await transactions.findOne({
@@ -91,8 +91,8 @@ const processPayment = catchAsync(async (req, res, next) => {
         externalTxn.failureReason = 'External transaction ID already exists';
         await externalTxn.save({ transaction: t });
         await t.commit();
-       // return next(new AppError('External transaction ID already exists', 404));
-        return next(new AppError('External transaction ID already exists', 200));
+        return next(new AppError('External transaction ID already exists', 404));
+      
       }
 
       // Create initial transaction
@@ -134,8 +134,8 @@ const processPayment = catchAsync(async (req, res, next) => {
           .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
           .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
 
-       // return next(new AppError('Voucher template not found', 404));
-        return next(new AppError('Voucher template not found', 200));
+       return next(new AppError('Voucher template not found', 404));
+      
       }
 
       //Check Price
@@ -158,8 +158,8 @@ const processPayment = catchAsync(async (req, res, next) => {
           .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
           .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
 
-       // return next(new AppError(`Insufficient amount. Expected at least ${expectedAmount}`, 404));
-        return next(new AppError(`Insufficient amount. Expected at least ${expectedAmount}`, 200));
+        return next(new AppError(`Insufficient amount. Expected at least ${expectedAmount}`, 404));
+       
       }
 
       if (body.amount > expectedAmount) {
@@ -194,8 +194,8 @@ const processPayment = catchAsync(async (req, res, next) => {
           .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
           .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
 
-       // return next(new AppError('Not enough voucher codes available', 404));
-        return next(new AppError('Not enough voucher codes available', 200));
+       return next(new AppError('Not enough voucher codes available', 404));
+        
       }
 
       // Mark codes as used
