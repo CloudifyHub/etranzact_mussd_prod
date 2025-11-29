@@ -251,9 +251,9 @@ const retrieveVoucherCodes = catchAsync(async (req, res, next) => {
           .catch(err => saveLog('SMS failed:', transactionId, 'failed', `${err.message}`));
 
         // Send WhatsApp
-        sendWhatsAppMsg(message, transactionDetails.customerMobile, transactionId)
-          .then(() => saveLog('WhatsApp sent', transactionId, 'success', message))
-          .catch(err => saveLog('WhatsApp failed:', transactionId, 'failed', `${err.message}`));
+        // sendWhatsAppMsg(message, transactionDetails.customerMobile, transactionId)
+        //   .then(() => saveLog('WhatsApp sent', transactionId, 'success', message))
+        //   .catch(err => saveLog('WhatsApp failed:', transactionId, 'failed', `${err.message}`));
 
       });
 
