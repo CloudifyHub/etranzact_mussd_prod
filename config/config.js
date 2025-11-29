@@ -9,7 +9,14 @@ module.exports = {
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
     "pool_mode": process.env.DB_POOL_MODE,  //for supabase only
-    "dialect": process.env.DB_DIALECT
+    "dialect": process.env.DB_DIALECT,
+    "logging": false,
+    "pool": {
+      "max": 30,        
+      "min": 5,
+      "acquire": 30000, // allow 30 seconds to obtain a connection
+      "idle": 10000,
+    }
   },
   "test": {
     "username": "root",
@@ -25,6 +32,13 @@ module.exports = {
     "host": process.env.DB_HOST,
     "port": process.env.DB_PORT,
     "pool_mode": process.env.DB_POOL_MODE,  //for supabase only
-    "dialect": process.env.DB_DIALECT
+    "dialect": process.env.DB_DIALECT,
+    "logging": false,
+    "pool": {
+      "max": 30,        
+      "min": 5,
+      "acquire": 30000, // allow 30 seconds to obtain a connection
+      "idle": 10000,
+    }
   }
 }
