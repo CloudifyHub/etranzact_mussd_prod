@@ -248,9 +248,9 @@ const processPayment = catchAsync(async (req, res, next) => {
               .catch(err => saveLog('SMS failed:', newTxn.transactionId, 'failed', `${err.message}`));
 
             // Send WhatsApp
-            // sendWhatsAppMsg(message, body.customerMobile, body.transactionId)
-            //   .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
-            //   .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
+            sendWhatsAppMsg(message, body.customerMobile, body.transactionId)
+              .then(() => saveLog('WhatsApp sent', newTxn.transactionId, 'success', message))
+              .catch(err => saveLog('WhatsApp failed:', newTxn.transactionId, 'failed', `${err.message}`));
 
           });
 
