@@ -42,6 +42,8 @@ const processPaymentTest = catchAsync(async (req, res, next) => {
       JSON.stringify(body)
     );
 
+    console.log('Test mode payment processed:', body);
+
     return res.status(200).json({
       status: 'success',
       message: 'Test mode: payment validated successfully',
@@ -49,9 +51,11 @@ const processPaymentTest = catchAsync(async (req, res, next) => {
         transactionId: body.transactionId,
         externalTransactionId: body.externalTransactionId,
         testMode: true
-      }
+      }  
     });
   }
+
+
 
   // ================================
   // REAL PAYMENT LOGIC CONTINUES
