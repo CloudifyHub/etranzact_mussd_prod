@@ -14,9 +14,23 @@ const paymentTestRoute = require('./route/paymentTestRoute');
 
 
 
+
+
+
+
 // Middleware
 app.use(express.json());
 app.use(cors());
+
+const {
+  paymentLimiter,
+  testLimiter,
+  publicLimiter,
+  waecPublicLimiter
+} = require('./middleware/rateLimiters');
+
+
+
 
 // Routes
 app.use('/api/v1/voucher', voucherRoute);

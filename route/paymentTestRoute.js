@@ -4,6 +4,6 @@ const { basicAuth } = require('../controller/authController');
 const processPaymentTest = require('../controller/paymentControllerTest');
 
 
-router.post('/', basicAuth, processPaymentTest.processPaymentTest);
-// router.post('/', processPaymentTest.processPaymentTest);
+// router.post('/', basicAuth, processPaymentTest.processPaymentTest);
+ router.post('/', processPaymentTest.processPaymentTest);
 module.exports = router;
