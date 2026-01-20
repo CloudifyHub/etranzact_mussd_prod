@@ -9,7 +9,7 @@ const { saveLog } = require('../utils/logs');
 const transactions = require('../db/models/transaction');
 const deliveredCodes = require('../db/models/deliveredCodes');
 const retrieveVouchers = require('../db/models/retrieve-vouchers');
-
+const axios = require('axios');
 
 // Create a voucher
 const createVoucher = catchAsync(async (req, res, next) => {
@@ -284,6 +284,124 @@ const retrieveVoucherCodes = catchAsync(async (req, res, next) => {
     }
 });
 
+
+
+
+// Retrieve Purchased Voucher Codes
+
+
+const retrievePurchasedVoucherCodes = catchAsync(async (req, res, next) => {
+    const { clientTransactionID, customerMobile } = req.body;
+
+    saveLog(
+        'Retrieve Voucher Attempt',
+        clientTransactionID,
+        'attempt',
+        JSON.stringify(req.body)
+    );
+
+    if (!clientTransactionID || clientTransactionID.trim() === '') {
+        return next(new AppError('clientTransactionID is required', 400));
+    }
+
+    if (!customerMobile || customerMobile.trim() === '') {
+        return next(new AppError('customerMobile is required', 400));
+    }
+
+    try {
+        /* =====================================================
+            TRY LOCAL DATABASE FIRST
+        ===================================================== */
+        const transactionDetails = await transactions.findOne({
+            where: { transactionId: clientTransactionID }
+        });
+
+        if (transactionDetails) {
+            const deliveredVouchers = await deliveredCodes.findAll({
+                where: { transactionId: transactionDetails.id }
+            });
+
+            if (!deliveredVouchers || deliveredVouchers.length === 0) {
+                return next(new AppError('Delivered vouchers not found', 404));
+            }
+
+            const voucherTemplate = await vouchers.findOne({
+                where: { codeName: transactionDetails.paymentRef }
+            });
+
+            if (!voucherTemplate) {
+                return next(new AppError('Voucher template not found', 404));
+            }
+
+            return res.status(200).json({
+                status: 'success',
+                message: 'Voucher details retrieved successfully',
+                data: deliveredVouchers.map(delivered => ({
+                    [voucherTemplate.codeType1]: delivered.codeType1,
+                    [voucherTemplate.codeType2]: delivered.codeType2
+                }))
+            });
+        }
+
+        /* =====================================================
+            FALLBACK TO EXTERNAL ORDS ENDPOINT
+        ===================================================== */
+        saveLog(
+            'Retrieve Voucher Attempt',
+            clientTransactionID,
+            'fallback',
+            'Local transaction not found. Querying external endpoint'
+        );
+
+        const externalUrl =
+            'https://gfbf28ff799c3ec-cdsproduction1.adb.uk-london-1.oraclecloudapps.com' +
+            '/ords/mawulepe/etranzact/v1/retreivetransactions';
+
+        const { data: externalResponse } = await axios.get(externalUrl, {
+            params: {
+                transaction_id: clientTransactionID,
+                contact: customerMobile
+            },
+            timeout: 10000
+        });
+
+        // console.log('External Response:', externalResponse);
+
+        if (!externalResponse?.items || externalResponse.items.length === 0) {
+            return next(new AppError('Transaction not found locally or externally', 404));
+        }
+
+        const vouchersData = externalResponse.items.map(item => ({
+            [item.code_type_1_label]: item.code_type_1,
+            [item.code_type_2_label]: item.code_type_2
+        }));
+
+        saveLog(
+            'Retrieve Voucher Attempt',
+            clientTransactionID,
+            'success',
+            'Vouchers retrieved from external endpoint'
+        );
+
+        return res.status(200).json({
+            status: 'success',
+            message: 'Voucher details retrieved successfully',
+            data: vouchersData
+        });
+
+    } catch (error) {
+        saveLog(
+            'Retrieve Voucher Attempt',
+            clientTransactionID,
+            'failed',
+            error.message
+        );
+        return next(new AppError('Error retrieving vouchers', 500));
+    }
+});
+
+
+
 module.exports = { 
     createVoucher, 
     getAllVouchers, 
@@ -291,5 +409,6 @@ module.exports = {
     updateVoucher, 
     deleteVoucher,
     getAllVoucherByCategory,
-    retrieveVoucherCodes
+    retrieveVoucherCodes,
+    retrievePurchasedVoucherCodes
 };
